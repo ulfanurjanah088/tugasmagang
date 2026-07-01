@@ -1,0 +1,25 @@
+# Buat file .gitignore
+echo "# Firebase credentials" >> .gitignore
+echo "*.json" >> .gitignore
+echo "!composer.json" >> .gitignore
+echo "" >> .gitignore
+echo "# Composer" >> .gitignore
+echo "/vendor/" >> .gitignore
+echo "composer.lock" >> .gitignore
+echo "" >> .gitignore
+echo "# Uploads" >> .gitignore
+echo "/uploads/" >> .gitignore
+echo "" >> .gitignore
+echo "# IDE" >> .gitignore
+echo ".idea/" >> .gitignore
+echo ".vscode/" >> .gitignore
+echo "*.swp" >> .gitignore
+echo "" >> .gitignore
+echo "# OS" >> .gitignore
+echo ".DS_Store" >> .gitignore
+echo "Thumbs.db" >> .gitignore
+echo "" >> .gitignore
+echo "# Environment" >> .gitignore
+echo ".env" >> .gitignore
+echo "*.env" >> .gitignore
+echo "config/supabase.php" >> .gitignore

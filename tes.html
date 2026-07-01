@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StitchControl AI — Finishing Monitoring</title>
+<style>
+:root {
+  --primary:#0f2027; --primary-dk:#0a1a1f; --accent:#00c896; --accent-lt:#e6fff8;
+  --danger:#e53e3e; --danger-lt:#fff5f5; --warn:#f6a623; --warn-lt:#fffaf0;
+  --text:#1a202c; --sub:#718096; --label:#a0aec0; --border:#e2e8f0;
+  --bg:#f7f8fa; --card:#fff; --sidebar:220px; --topbar:60px; --r:12px; --r-sm:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+
+/* Utils */
+.hidden{display:none!important}
+.flex{display:flex}.flex-col{flex-direction:column}.items-center{align-items:center}
+.justify-between{justify-content:space-between}.gap-8{gap:8px}.gap-12{gap:12px}
+.gap-16{gap:16px}.w-full{width:100%}.mt-8{margin-top:8px}.mt-12{margin-top:12px}
+.mt-16{margin-top:16px}.mt-20{margin-top:20px}.mb-8{margin-bottom:8px}.mb-12{margin-bottom:12px}
+.text-sm{font-size:12px}.text-xs{font-size:11px}.font-bold{font-weight:700}.font-semibold{font-weight:600}
+.text-sub{color:var(--sub)}.text-label{color:var(--label);text-transform:uppercase;letter-spacing:.5px;font-size:11px;font-weight:600}
+
+/* Badge */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-run{background:#e6fff8;color:#00a87a}.badge-idle{background:#fff8eb;color:#c07800}
+.badge-stop{background:#fff0f0;color:#c53030}.badge-prog{background:#e6fff8;color:#00a87a}
+.badge-pend{background:#fff8eb;color:#c07800}.badge-over{background:#fff0f0;color:#c53030}
+.badge-sched{background:#edf2f7;color:#718096}.badge-dot::before{content:'';width:6px;height:6px;border-radius:50%;display:inline-block}
+.badge-run.badge-dot::before{background:#00c896}.badge-idle.badge-dot::before{background:#f6a623}
+.badge-stop.badge-dot::before{background:#e53e3e}
+
+/* Progress */
+.prog-wrap{width:100%;background:#e2e8f0;border-radius:4px;height:6px;overflow:hidden}
+.prog-bar{height:100%;border-radius:4px;transition:width .4s}
+.prog-g{background:#00c896}.prog-o{background:#f6a623}.prog-r{background:#e53e3e}
+
+/* Card */
+.card{background:var(--card);border-radius:var(--r);border:1px solid var(--border);padding:20px}
+.card-sm{padding:14px 16px}.card-dark{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 18px;border-radius:var(--r-sm);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s}
+.btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:#1a3040}
+.btn-accent{background:var(--accent);color:#fff}.btn-accent:hover{background:#00a87a}
+.btn-danger{background:var(--danger);color:#fff}.btn-danger:hover{background:#c53030}
+.btn-outline{background:#fff;color:var(--text);border:1.5px solid var(--border)}.btn-outline:hover{background:var(--bg)}
+.btn-ghost{background:transparent;color:var(--sub);border:1.5px solid var(--border)}
+.btn-lg{padding:13px 24px;font-size:14px;border-radius:10px;width:100%}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-emstop{background:var(--danger-lt);color:var(--danger);border:1.5px solid var(--danger);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px}
+
+/* Inputs */
+.form-group{margin-bottom:14px}
+label.field-label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--sub);margin-bottom:5px}
+input,select,textarea{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:13px;background:#fff;color:var(--text);transition:border-color .15s;outline:none;font-family:inherit}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+.input-icon-wrap{position:relative}.input-icon-wrap input,.input-icon-wrap select{padding-left:38px}
+.input-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--label);font-size:15px}
+textarea{resize:vertical;min-height:80px}
+.form-row{display:flex;gap:14px}.form-row>*{flex:1}
+
+/* Divider */
+.divider{height:1px;background:var(--border);margin:16px 0}
+
+/* ── AUTH ── */
+.auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f0f4f8 0%,#e8ecf0 100%);padding:20px}
+.auth-box{background:#fff;border-radius:16px;border:1px solid var(--border);width:100%;max-width:420px;padding:36px;box-shadow:0 4px 24px rgba(0,0,0,.06)}
+.auth-logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700;margin-bottom:28px}
+.auth-logo-icon{width:38px;height:38px;background:var(--primary);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px}
+.role-select-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.role-card{border:2px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;text-align:center;transition:.15s}
+.role-card:hover,.role-card.active{border-color:var(--accent);background:var(--accent-lt)}
+.role-card .role-icon{font-size:24px;margin-bottom:6px}
+.role-card .role-name{font-weight:700;font-size:13px}
+.role-card .role-sub{font-size:11px;color:var(--sub);margin-top:2px}
+
+/* ── LAYOUT ── */
+#app{display:flex;min-height:100vh}
+.sidebar{width:var(--sidebar);background:var(--primary);color:#fff;display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:transform .25s}
+.sb-logo{padding:18px 16px;display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;border-bottom:1px solid rgba(255,255,255,.08)}
+.sb-logo-icon{width:30px;height:30px;background:rgba(255,255,255,.12);border-radius:7px;display:flex;align-items:center;justify-content:center}
+.sb-role{padding:10px 16px 4px;font-size:10px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid rgba(255,255,255,.06);padding-bottom:8px;margin-bottom:4px}
+.sb-role strong{color:rgba(255,255,255,.7);font-size:12px;display:block;margin-top:2px}
+.sb-nav{flex:1;padding:6px 8px;display:flex;flex-direction:column;gap:2px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:rgba(255,255,255,.65);transition:.15s}
+.nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav-item.active{background:rgba(255,255,255,.14);color:#fff;font-weight:600}
+.nav-item .ni{font-size:16px;width:20px;text-align:center}
+.sb-bottom{padding:10px 8px;border-top:1px solid rgba(255,255,255,.08)}
+.btn-emergency{background:var(--danger);color:#fff;border:none;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;width:100%;justify-content:center;margin-bottom:4px}
+
+/* Topbar */
+.topbar{position:fixed;top:0;left:var(--sidebar);right:0;height:var(--topbar);background:#fff;border-bottom:1px solid var(--border);z-index:99;display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+.topbar-right{display:flex;align-items:center;gap:14px}
+.tb-search{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 12px}
+.tb-search input{border:none;background:transparent;padding:0;font-size:13px;width:200px}
+.tb-bell{position:relative;cursor:pointer;font-size:20px;color:var(--sub)}
+.tb-badge{position:absolute;top:-4px;right:-4px;width:8px;height:8px;background:var(--danger);border-radius:50%;border:2px solid #fff}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;cursor:pointer}
+
+/* Main */
+.main{margin-left:var(--sidebar);padding-top:var(--topbar);flex:1;min-height:100vh}
+.page{padding:26px;max-width:1280px;display:none}
+.page.active-page{display:block}
+.ph{margin-bottom:22px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.ph h1{font-size:22px;font-weight:700}
+.ph p{color:var(--sub);margin-top:3px;font-size:13px}
+
+/* Stats grid */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.stat-c{background:#fff;border-radius:var(--r);border:1px solid var(--border);padding:16px 18px}
+.stat-c .sl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--sub);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.stat-c .sv{font-size:24px;font-weight:700;line-height:1}
+.stat-c .ss{font-size:12px;color:var(--sub);margin-top:5px}
+.stat-c .ss.up{color:#00a87a}.stat-c .ss.dn{color:var(--danger)}
+
+/* Section title */
+.st{font-size:15px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.st a{font-size:12px;font-weight:500;color:var(--accent);cursor:pointer}
+
+/* Table */
+.data-table{width:100%;border-collapse:collapse}
+.data-table th{text-align:left;font-size:11px;color:var(--label);text-transform:uppercase;letter-spacing:.4px;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg)}
+.data-table td{padding:12px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tbody tr:hover td{background:#fafbfc}
+
+/* 2-col layout */
+.two-col{display:grid;grid-template-columns:1fr 300px;gap:18px}
+.two-col-lg{display:grid;grid-template-columns:1fr 340px;gap:18px}
+.three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+
+/* Tabs */
+.tab-nav{display:flex;border-bottom:2px solid var(--border);margin-bottom:18px;gap:0;flex-wrap:wrap}
+.tab-btn{padding:9px 18px;font-size:13px;font-weight:600;color:var(--label);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap}
+.tab-btn.active{color:var(--primary);border-color:var(--primary)}
+
+/* Floor grid */
+.floor-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.fc{aspect-ratio:1;border-radius:6px}
+.fc.run{background:#00c896}.fc.stop{background:#e53e3e}.fc.idle{background:#f6a623}.fc.off{background:#e2e8f0}
+.floor-legend{display:flex;gap:14px;margin-top:10px;flex-wrap:wrap}
+.fl-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--sub)}
+.fl-dot{width:10px;height:10px;border-radius:2px}
+
+/* Alert */
+.alert-item{border:1px solid var(--border);border-radius:var(--r-sm);padding:14px;margin-bottom:10px}
+.alert-item.crit{border-left:3px solid var(--danger)}.alert-item.warn{border-left:3px solid var(--warn)}.alert-item.ok{border-left:3px solid var(--accent)}
+.alert-hd{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.ai-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.ai-icon.red{background:var(--danger-lt);color:var(--danger)}.ai-icon.org{background:var(--warn-lt);color:var(--warn)}.ai-icon.grn{background:var(--accent-lt);color:var(--accent)}
+.ai-title{font-weight:600;font-size:13px;flex:1}.ai-time{font-size:11px;color:var(--label)}
+.ai-desc{font-size:12px;color:var(--sub);margin-left:42px;margin-bottom:8px}
+
+/* Check list */
+.check-item{display:flex;align-items:flex-start;gap:10px;background:#fff;border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:8px}
+.check-item.done{background:#f0fff8;border-color:#b2f5e0}
+.check-box{width:18px;height:18px;border-radius:4px;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px;cursor:pointer;transition:.15s}
+.check-box.done{background:var(--accent);border-color:var(--accent);color:#fff;font-size:11px}
+.ck-title{font-weight:600;font-size:13px}.ck-sub{font-size:11px;color:var(--sub);margin-top:2px}
+
+/* Hourly entries */
+.hourly-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.hourly-row:last-child{border-bottom:none}
+.h-time{font-size:13px;font-weight:700;width:44px;flex-shrink:0;color:var(--sub)}
+.h-time.cur{color:var(--text)}
+.h-val{font-size:20px;font-weight:700;min-width:40px}
+.h-remark{font-size:12px;color:var(--sub)}
+.h-icon{font-size:18px;margin-left:auto}
+
+/* Active session */
+.active-sess{background:#fff;border:2px solid var(--accent);border-radius:var(--r);padding:16px;margin:8px 0}
+.active-badge{background:var(--accent);color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;display:inline-block;margin-left:8px}
+
+/* Summary card */
+.sum-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+.sum-row:last-child{border-bottom:none}
+.sum-val{font-size:18px;font-weight:700}
+.sum-incentive{color:var(--accent);font-size:18px;font-weight:700}
+
+/* Issue grid */
+.issue-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.issue-card{border:1.5px solid var(--border);border-radius:var(--r-sm);padding:14px;cursor:pointer;transition:.15s;text-align:center}
+.issue-card:hover{border-color:var(--accent)}.issue-card.sel{border-color:var(--accent);background:var(--accent-lt)}
+.issue-icon{font-size:22px;margin-bottom:6px}
+.issue-name{font-weight:700;font-size:12px}
+.issue-desc{font-size:11px;color:var(--sub);margin-top:3px}
+
+/* KPI strip */
+.kpi-strip{background:var(--primary);border-radius:var(--r);padding:16px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:18px}
+.kpi-item .ki-label{font-size:10px;color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:4px}
+.kpi-item .ki-val{font-size:22px;font-weight:700;color:#fff}
+
+/* AI Insight box */
+.ai-box{background:var(--primary);color:#fff;border-radius:var(--r);padding:20px}
+.ai-badge-txt{font-size:11px;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:5px;margin-bottom:6px}
+.ai-big{font-size:44px;font-weight:700;line-height:1}
+.ai-sub-txt{font-size:12px;color:rgba(255,255,255,.5);margin-bottom:14px}
+.ai-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ai-sb{background:rgba(255,255,255,.08);border-radius:8px;padding:12px}
+.ai-sb-l{font-size:10px;color:rgba(255,255,255,.5);text-transform:uppercase}
+.ai-sb-v{font-size:17px;font-weight:700;margin-top:3px}
+
+/* Notice box */
+.notice{background:#fff8eb;border:1px solid #fbd38d;border-radius:var(--r-sm);padding:12px 14px;margin-top:12px}
+.notice-title{font-weight:700;font-size:12px;color:#7b4f00;margin-bottom:3px}
+.notice-text{font-size:12px;color:#975a16}
+
+/* Downtime analysis */
+.dt-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.dt-item:last-child{border-bottom:none}
+.dt-ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.dt-ico.r{background:#fff0f0;color:var(--danger)}.dt-ico.o{background:#fff8eb;color:var(--warn)}.dt-ico.g{background:#e6fff8;color:var(--accent)}
+.dt-label{flex:1;font-size:13px;font-weight:600}
+.dt-val{font-weight:700;font-size:13px}
+.dt-val.r{color:var(--danger)}.dt-val.o{color:var(--warn)}.dt-val.g{color:var(--accent)}
+
+/* Filter tabs */
+.filter-tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.ftab{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:#fff;color:var(--sub)}
+.ftab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+/* Op table */
+.op-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.eff-badge{padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700}
+.eff-hi{background:#e6fff8;color:#00a87a}.eff-lo{background:#fff0f0;color:var(--danger)}
+
+/* Machine cards */
+.mc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.mc{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:16px}
+.mc.run{border-top:3px solid var(--accent)}.mc.idle{border-top:3px solid var(--warn)}.mc.maint{border-top:3px solid var(--warn)}
+.mc-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+.mc-name{font-size:17px;font-weight:700}.mc-model{font-size:12px;color:var(--sub)}
+.mc-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.mc-sl{font-size:10px;text-transform:uppercase;color:var(--label)}.mc-sv{font-size:14px;font-weight:700;margin-top:2px}
+.mc-sv.err{color:var(--danger)}.mc-add{border-style:dashed;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;color:var(--label);cursor:pointer;min-height:160px}
+.mc-add:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Chart placeholder */
+.chart-area{width:100%;height:150px}
+.chart-area svg{width:100%;height:100%}
+
+/* Prod list action */
+.act-dots{background:none;border:none;cursor:pointer;color:var(--sub);font-size:18px;padding:2px 6px}
+
+/* MOBILE */
+.mob-topbar{display:none;position:fixed;top:0;left:0;right:0;z-index:200;background:#fff;border-bottom:1px solid var(--border);padding:12px 16px;align-items:center;justify-content:space-between}
+.bot-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);z-index:200}
+.bot-nav-inner{display:flex}
+.bn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 0 8px;cursor:pointer;color:var(--label);font-size:10px;gap:3px}
+.bn.active{color:var(--accent)}.bn-ic{font-size:19px}
+.mob-content{display:none;padding:14px;padding-bottom:78px}
+.mob-card{background:#fff;border-radius:var(--r);border:1px solid var(--border);padding:14px;margin-bottom:10px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:150;display:none}
+.overlay.open{display:block}
+
+@media(max-width:900px){
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .two-col,.two-col-lg{grid-template-columns:1fr}
+  .three-col{grid-template-columns:1fr 1fr}
+  .issue-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}
+  .topbar{display:none}.main{margin-left:0;padding-top:60px}
+  .mob-topbar{display:flex}.bot-nav{display:block}.mob-content{display:block}
+  .desk-only{display:none!important}
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .three-col{grid-template-columns:1fr 1fr}
+  .mc-grid{grid-template-columns:1fr}
+}
+@media(min-width:769px){.mob-only{display:none!important}.page{display:none}.page.active-page{display:block}}
+</style>
+</head>
+<body>
+
+<!-- ════ LOGIN ════ -->
+<div id="screen-login" class="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">🪡</div>
+      StitchControl AI
+    </div>
+    <div style="font-size:20px;font-weight:700;margin-bottom:4px">Selamat Datang</div>
+    <div style="font-size:13px;color:var(--sub);margin-bottom:20px">Sistem Monitoring Produksi Finishing Embroidery</div>
+
+    <div style="margin-bottom:14px">
+      <label class="field-label">Login Sebagai</label>
+      <div class="role-select-grid">
+        <div class="role-card active" id="rc-operator" onclick="selectRole('operator')">
+          <div class="role-icon">👷</div>
+          <div class="role-name">Operator</div>
+          <div class="role-sub">Input produksi harian</div>
+        </div>
+        <div class="role-card" id="rc-leader" onclick="selectRole('leader')">
+          <div class="role-icon">📊</div>
+          <div class="role-name">Leader / Admin</div>
+          <div class="role-sub">Monitoring & laporan</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="field-label">Username / Employee ID</label>
+      <div class="input-icon-wrap">
+        <span class="input-icon">🪪</span>
+        <input type="text" id="login-user" placeholder="Contoh: OP-0042" value="OP-0042">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="field-label">Password</label>
+      <div class="input-icon-wrap">
+        <span class="input-icon">🔒</span>
+        <input type="password" id="login-pw" placeholder="••••••••" value="12345">
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px">
+      <input type="checkbox" id="remember" style="width:auto">
+      <label for="remember" style="font-size:13px;color:var(--sub);margin:0">Ingat perangkat ini</label>
+    </div>
+    <button class="btn btn-primary btn-lg" onclick="doLogin()">Masuk ke Sistem →</button>
+    <div style="margin-top:16px;display:flex;justify-content:center;gap:18px">
+      <span style="font-size:11px;color:var(--label)">🟢 SISTEM AKTIF</span>
+      <span style="font-size:11px;color:var(--label)">🔒 AES-256 ENCRYPTED</span>
+    </div>
+  </div>
+</div>
+
+<!-- ════ APP ════ -->
+<div id="app" class="hidden">
+  <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-logo">
+      <div class="sb-logo-icon">🪡</div>
+      StitchControl AI
+    </div>
+    <div class="sb-role">
+      Role Aktif
+      <strong id="sb-role-txt">Operator</strong>
+    </div>
+    <nav class="sb-nav" id="sb-nav"></nav>
+    <div class="sb-bottom">
+      <button class="btn-emergency" onclick="alert('⏹ Emergency Stop Triggered!')">⏹ Emergency Stop</button>
+      <div class="nav-item" style="margin-top:2px" onclick="doLogout()"><span class="ni">🚪</span> Logout</div>
+    </div>
+  </aside>
+
+  <!-- Topbar -->
+  <div class="topbar desk-only">
+    <div class="tb-search">
+      <span>🔍</span>
+      <input type="text" placeholder="Cari style, batch, operator...">
+    </div>
+    <div class="topbar-right">
+      <div class="tb-bell">🔔<div class="tb-badge"></div></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="avatar" id="tb-avatar">OP</div>
+        <div>
+          <div style="font-size:13px;font-weight:600" id="tb-name">Ega Selaclevi</div>
+          <div style="font-size:11px;color:var(--sub)" id="tb-role-label">Operator</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile topbar -->
+  <div class="mob-topbar" id="mob-topbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:22px;cursor:pointer" onclick="toggleSidebar()">☰</span>
+      <span style="font-size:16px;font-weight:700">StitchControl AI</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="tb-bell">🔔<div class="tb-badge"></div></div>
+      <div class="avatar" id="mob-avatar">OP</div>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="main" id="main-wrap">
+
+    <!-- ═══ OPERATOR PAGES ═══ -->
+
+    <!-- OP: Dashboard -->
+    <div id="pg-op-dashboard" class="page">
+      <div class="ph">
+        <div>
+          <h1>Dashboard Operator</h1>
+          <p id="op-dash-sub">Selamat pagi! Berikut ringkasan produksi Anda hari ini.</p>
+        </div>
+        <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:13px">📅 <span id="today-date"></span></div>
+      </div>
+
+      <!-- Operator info card -->
+      <div class="card" style="margin-bottom:16px;border-left:4px solid var(--accent)">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;flex-wrap:wrap">
+          <div>
+            <div class="text-label">Nama Operator</div>
+            <div style="font-size:16px;font-weight:700;margin-top:4px" id="op-name-display">Ega Selaclevi</div>
+          </div>
+          <div>
+            <div class="text-label">Style Aktif</div>
+            <div style="font-size:16px;font-weight:700;margin-top:4px" id="op-style-display">IVYS / HCPS</div>
+          </div>
+          <div>
+            <div class="text-label">Status Mesin</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+              <div style="width:8px;height:8px;background:var(--accent);border-radius:50%"></div>
+              <span style="font-weight:700;color:var(--accent)">RUNNING</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-c">
+          <div class="sl">Target / Jam <span>🎯</span></div>
+          <div class="sv" id="op-target-jam">135 <span style="font-size:14px;font-weight:400;color:var(--sub)">Pcs</span></div>
+        </div>
+        <div class="stat-c">
+          <div class="sl">Output Hari Ini <span>📦</span></div>
+          <div class="sv" id="op-output-today">125 <span style="font-size:14px;font-weight:400;color:var(--sub)">Pcs</span></div>
+          <div class="ss up">2 jam terekam</div>
+        </div>
+        <div class="stat-c">
+          <div class="sl">Target Harian <span>📋</span></div>
+          <div class="sv" id="op-target-day">1,080 <span style="font-size:14px;font-weight:400;color:var(--sub)">Pcs</span></div>
+        </div>
+        <div class="stat-c">
+          <div class="sl">Pencapaian <span style="color:var(--accent)">⚡</span></div>
+          <div class="sv" id="op-pct">11.6 <span style="font-size:14px;font-weight:400;color:var(--sub)">%</span></div>
+          <div style="margin-top:6px"><div class="prog-wrap"><div class="prog-bar prog-g" id="op-pct-bar" style="width:11.6%"></div></div></div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div>
+          <!-- Recent entries -->
+          <div class="card">
+            <div class="st">Riwayat Input Hari Ini <a onclick="navTo('op-riwayat')">Lihat Semua →</a></div>
+            <div id="op-history-preview">
+              <div style="color:var(--sub);font-size:13px;padding:12px 0;text-align:center">Belum ada data input hari ini.</div>
+            </div>
+            <button class="btn btn-primary w-full mt-12" onclick="navTo('op-input')">+ Input Output Produksi</button>
+          </div>
+        </div>
+        <div>
+          <!-- Summary -->
+          <div class="card" style="margin-bottom:12px">
+            <div class="st">Summary Hari Ini</div>
+            <div class="sum-row"><span>Total Output</span><span class="sum-val" id="sum-total">125 Pcs</span></div>
+            <div class="sum-row"><span>Waktu Efektif</span><span class="sum-val" id="sum-jam">180 Min</span></div>
+            <div class="sum-row"><span>Kendala Tercatat</span><span class="sum-val" id="sum-kendala">0</span></div>
+            <div class="sum-row"><span>Estimated Incentive</span><span class="sum-incentive" id="sum-incentive">Rp 24,500</span></div>
+          </div>
+          <button class="btn btn-ghost w-full" onclick="navTo('op-kendala')">⚠ Laporkan Kendala</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- OP: Input Output -->
+    <div id="pg-op-input" class="page">
+      <div class="ph">
+        <div><h1>Input Output Produksi</h1><p>Rekam hasil produksi per jam kerja Anda.</p></div>
+      </div>
+
+      <!-- Batch info (readonly, dari leader) -->
+      <div class="card" style="margin-bottom:16px;background:var(--bg)">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;flex-wrap:wrap">
+          <div>
+            <div class="text-label">Lot / Batch</div>
+            <div style="font-weight:700;margin-top:4px" id="inp-lot">503 + 568</div>
+          </div>
+          <div>
+            <div class="text-label">Style</div>
+            <div style="font-weight:700;margin-top:4px" id="inp-style">IVYS / HCPS</div>
+          </div>
+          <div>
+            <div class="text-label">Process</div>
+            <div style="font-weight:700;margin-top:4px">Finishing</div>
+          </div>
+          <div>
+            <div class="text-label">Target / Jam</div>
+            <div style="font-weight:700;margin-top:4px;color:var(--accent)" id="inp-target">135 Pcs</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div>
+          <!-- Hourly list -->
+          <div class="card" style="margin-bottom:14px">
+            <div class="st">Riwayat Jam Ini</div>
+            <div id="hourly-list">
+              <div class="hourly-row">
+                <div class="h-time">07:00</div>
+                <div style="flex:1">
+                  <div style="font-size:11px;color:var(--label)">ACTUAL</div>
+                  <div class="h-val" style="color:var(--label)">0</div>
+                </div>
+                <div class="h-remark">Start Up</div>
+                <div class="h-icon" style="color:#c8d4e0">○</div>
+              </div>
+              <div class="hourly-row">
+                <div class="h-time cur">08:00</div>
+                <div style="flex:1">
+                  <div style="font-size:11px;color:var(--label)">ACTUAL</div>
+                  <div class="h-val">60</div>
+                </div>
+                <div class="h-remark">-</div>
+                <div class="h-icon" style="color:var(--accent)">✓</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active input session -->
+          <div class="active-sess">
+            <div style="display:flex;align-items:center;margin-bottom:14px">
+              <span style="font-weight:700;font-size:15px">09:00</span>
+              <span class="active-badge">SESI AKTIF</span>
+              <span style="margin-left:auto;color:var(--sub);cursor:pointer">✏</span>
+            </div>
+            <div class="form-group">
+              <label class="field-label">Style</label>
+              <select id="inp-style-sel">
+                <option>IVYS / HCPS</option>
+                <option>POLO-NAVY-M04</option>
+                <option>CORP-LOGO-A</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="field-label">Jumlah Output (Qty)</label>
+              <input type="number" id="inp-qty" placeholder="0" style="font-size:22px;font-weight:700;text-align:right" value="65">
+            </div>
+            <button class="btn btn-primary btn-lg" onclick="saveEntry()">💾 SIMPAN INPUT 09:00</button>
+          </div>
+
+          <div style="margin-top:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:8px;color:var(--label)">
+            <span>🔒</span>
+            <span style="font-size:12px">10:00 — Menunggu jadwal...</span>
+          </div>
+        </div>
+
+        <div>
+          <!-- Summary -->
+          <div class="card" style="margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.4px">Summary Totals</div>
+              <div style="font-size:11px;color:var(--sub)">REF: DEP-CUT-FIN-001</div>
+            </div>
+            <div class="sum-row"><span style="font-size:13px">Total Output (CUMM)</span><span class="sum-val">125</span></div>
+            <div class="sum-row"><span style="font-size:13px">Waktu Efektif</span><span class="sum-val">180 <span style="font-size:11px;color:var(--sub)">Min</span></span></div>
+            <div class="sum-row"><span style="display:flex;align-items:center;gap:5px;font-size:13px"><span style="color:var(--accent)">⟳</span> Est. Incentive</span><span class="sum-incentive">Rp 24,500</span></div>
+          </div>
+          <div class="notice">
+            <div style="display:flex;gap:8px">
+              <span>ℹ</span>
+              <div>
+                <div class="notice-title">STANDARDS NOTICE</div>
+                <div class="notice-text">Fussing: 0.05 min/pnl (1200 pnl/jam). Repining 5 jarum: 0.38 min/ply (158 ply/jam).</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OP: Kendala -->
+    <div id="pg-op-kendala" class="page">
+      <div class="ph">
+        <div><h1>Laporkan Kendala</h1><p>Pilih jenis kendala yang terjadi pada proses produksi.</p></div>
+      </div>
+      <div class="two-col">
+        <div>
+          <div class="card" style="margin-bottom:14px">
+            <div class="st">Pilih Jenis Kendala <span style="font-size:11px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:3px 8px;color:var(--sub)">OPSIONAL</span></div>
+            <div class="issue-grid">
+              <div class="issue-card sel" onclick="selIssue(this,'Out Set')">
+                <div class="issue-icon">🔧</div>
+                <div class="issue-name">Out Set</div>
+                <div class="issue-desc">Penyimpangan set mesin</div>
+              </div>
+              <div class="issue-card" onclick="selIssue(this,'Mesin Rusak')">
+                <div class="issue-icon">⚙</div>
+                <div class="issue-name">Mesin Rusak</div>
+                <div class="issue-desc">Kerusakan mekanis mesin</div>
+              </div>
+              <div class="issue-card" onclick="selIssue(this,'Material Habis')">
+                <div class="issue-icon">📦</div>
+                <div class="issue-name">Material Habis</div>
+                <div class="issue-desc">Stok benang/bahan habis</div>
+              </div>
+              <div class="issue-card" onclick="selIssue(this,'Jarum Putus')">
+                <div class="issue-icon">🪡</div>
+                <div class="issue-name">Jarum Putus</div>
+                <div class="issue-desc">Patah saat siklus jahit</div>
+              </div>
+              <div class="issue-card" onclick="selIssue(this,'Lainnya')">
+                <div class="issue-icon">💬</div>
+                <div class="issue-name">Lainnya</div>
+                <div class="issue-desc">Kendala tidak terdaftar</div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="form-group">
+              <label class="field-label">Jam Kendala</label>
+              <input type="time" id="kendala-jam" value="09:15">
+            </div>
+            <div class="form-group">
+              <label class="field-label">Durasi (menit)</label>
+              <input type="number" id="kendala-dur" value="15" placeholder="0">
+            </div>
+            <div class="form-group">
+              <label class="field-label">Keterangan Tambahan</label>
+              <textarea id="kendala-ket" placeholder="Jelaskan gejala atau nomor head..."></textarea>
+            </div>
+            <div style="display:flex;gap:10px">
+              <button class="btn btn-outline" style="flex:1" onclick="navTo('op-dashboard')">Batal</button>
+              <button class="btn btn-primary" style="flex:1" onclick="saveKendala()">Kirim Laporan</button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div style="background:var(--primary);color:#fff;border-radius:var(--r);padding:18px">
+            <div style="font-size:14px;font-weight:700;margin-bottom:6px">Butuh Bantuan Segera?</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:14px">Panggil teknisi ke lokasi Anda.</div>
+            <button class="btn btn-accent w-full"> Panggil Teknisi</button>
+          </div>
+          <div class="card mt-12">
+            <div class="st">Kendala Hari Ini</div>
+            <div id="kendala-list-mini" style="color:var(--sub);font-size:12px;text-align:center;padding:10px 0">Belum ada kendala hari ini.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OP: Riwayat -->
+    <div id="pg-op-riwayat" class="page">
+      <div class="ph">
+        <div><h1>Riwayat Produksi</h1><p>Data output yang telah diinput pada hari ini.</p></div>
+        <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:13px">📅 <span id="riwayat-date"></span></div>
+      </div>
+      <div class="two-col">
+        <div>
+          <div class="card">
+            <div class="st">Detail Input Per Jam</div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Jam</th><th>Style</th><th>Output (Qty)</th><th>Target</th><th>Selisih</th><th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="riwayat-tbody">
+                <tr>
+                  <td>07:00</td><td>-</td><td style="font-weight:700">0</td><td>135</td><td style="color:var(--danger)">-135</td><td><span class="badge badge-sched">Start Up</span></td>
+                </tr>
+                <tr>
+                  <td>08:00</td><td>IVYS/HCPS</td><td style="font-weight:700">60</td><td>135</td><td style="color:var(--danger)">-75</td><td><span class="badge badge-pend">Di Bawah Target</span></td>
+                </tr>
+                <tr>
+                  <td>09:00</td><td>IVYS/HCPS</td><td style="font-weight:700">65</td><td>135</td><td style="color:var(--danger)">-70</td><td><span class="badge badge-pend">Di Bawah Target</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="st">Rekap Harian</div>
+            <div class="sum-row"><span>Total Output</span><span class="sum-val">125 Pcs</span></div>
+            <div class="sum-row"><span>Target Harian</span><span class="sum-val">1,080 Pcs</span></div>
+            <div class="sum-row"><span>Pencapaian</span><span class="sum-val" style="color:var(--warn)">11.6%</span></div>
+            <div class="sum-row"><span>Kendala Tercatat</span><span class="sum-val">0</span></div>
+            <div style="margin-top:12px">
+              <div style="font-size:12px;color:var(--sub);margin-bottom:6px;display:flex;justify-content:space-between"><span>Progress Harian</span><span>11.6%</span></div>
+              <div class="prog-wrap"><div class="prog-bar prog-o" style="width:11.6%"></div></div>
+            </div>
+          </div>
+          <div class="card mt-12">
+            <div class="st">Kendala Tercatat</div>
+            <div id="kendala-list-riwayat" style="color:var(--sub);font-size:12px;text-align:center;padding:10px 0">Tidak ada kendala hari ini. ✓</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ LEADER / ADMIN PAGES ═══ -->
+
+    <!-- LEADER: Dashboard -->
+    <div id="pg-ld-dashboard" class="page">
+      <div class="ph">
+        <div><h1>Dashboard Monitoring</h1><p>Pantau performa produksi finishing embroidery secara real-time.</p></div>
+        <div style="display:flex;gap:8px">
+          <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:13px">📅 <span id="ld-today"></span></div>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-c">
+          <div class="sl">Total Target <span>🎯</span></div>
+          <div class="sv">4,320 <span style="font-size:14px;font-weight:400;color:var(--sub)">Pcs</span></div>
+          <div class="ss">Target produksi hari ini</div>
+        </div>
+        <div class="stat-c">
+          <div class="sl">Total Output <span>📦</span></div>
+          <div class="sv" style="color:#00a87a">1,845 <span style="font-size:14px;font-weight:400;color:var(--sub)">Pcs</span></div>
+          <div class="ss up">↑ +12.5% vs kemarin</div>
+        </div>
+        <div class="stat-c">
+          <div class="sl">% Pencapaian <span style="color:var(--accent)">⚡</span></div>
+          <div class="sv">42.7 <span style="font-size:14px;font-weight:400;color:var(--sub)">%</span></div>
+          <div style="margin-top:6px"><div class="prog-wrap"><div class="prog-bar prog-o" style="width:42.7%"></div></div></div>
+        </div>
+        <div class="stat-c">
+          <div class="sl">Status Produksi <span>🔄</span></div>
+          <div class="sv" style="font-size:18px">
+            <span class="badge badge-run badge-dot" style="font-size:14px">ON TRACK</span>
+          </div>
+          <div class="ss">32 operator aktif</div>
+        </div>
+      </div>
+
+      <div class="two-col-lg">
+        <div>
+          <!-- Output per operator -->
+          <div class="card" style="margin-bottom:16px">
+            <div class="st">Output Operator (Top 5) <a onclick="navTo('ld-monitoring')">Lihat Semua →</a></div>
+            <table class="data-table">
+              <thead><tr><th>Operator</th><th>Style</th><th>Output</th><th>Target</th><th>%</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><div style="display:flex;align-items:center;gap:8px"><div class="op-av" style="background:#2b6cb0">AM</div><div><div style="font-weight:600">Agus Mahendra</div><div style="font-size:11px;color:var(--sub)">OP-042</div></div></div></td>
+                  <td>IVYS/HCPS</td><td style="font-weight:700">420</td><td>405</td>
+                  <td><span class="eff-badge eff-hi">103.7%</span></td>
+                  <td><span class="badge badge-prog">Tercapai</span></td>
+                </tr>
+                <tr>
+                  <td><div style="display:flex;align-items:center;gap:8px"><div class="op-av" style="background:#00a87a">SD</div><div><div style="font-weight:600">Siti Dahlia</div><div style="font-size:11px;color:var(--sub)">OP-085</div></div></div></td>
+                  <td>POLO-M04</td><td style="font-weight:700">385</td><td>405</td>
+                  <td><span class="eff-badge eff-hi">95.1%</span></td>
+                  <td><span class="badge badge-pend">Mendekati</span></td>
+                </tr>
+                <tr>
+                  <td><div style="display:flex;align-items:center;gap:8px"><div class="op-av" style="background:#f6a623">BP</div><div><div style="font-weight:600">Budi Prakoso</div><div style="font-size:11px;color:var(--sub)">OP-021</div></div></div></td>
+                  <td>CORP-A</td><td style="font-weight:700">270</td><td>405</td>
+                  <td><span class="eff-badge eff-lo">66.7%</span></td>
+                  <td><span class="badge badge-over">Di Bawah</span></td>
+                </tr>
+                <tr>
+                  <td><div style="display:flex;align-items:center;gap:8px"><div class="op-av" style="background:#805ad5">ER</div><div><div style="font-weight:600">Ega Selaclevi</div><div style="font-size:11px;color:var(--sub)">OP-033</div></div></div></td>
+                  <td>IVYS/HCPS</td><td style="font-weight:700">125</td><td>405</td>
+                  <td><span class="eff-badge eff-lo">30.9%</span></td>
+                  <td><span class="badge badge-pend">Baru Mulai</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Kendala terbaru -->
+          <div class="card">
+            <div class="st">Kendala Terbaru <a onclick="navTo('ld-kendala')">Lihat Semua →</a></div>
+            <div class="alert-item crit">
+              <div class="alert-hd">
+                <div class="ai-icon red">⚙</div>
+                <div class="ai-title">Mesin Rusak — Ega Selaclevi (OP-033)</div>
+                <div class="ai-time">09:15</div>
+              </div>
+              <div class="ai-desc">Durasi: 15 menit. Style: IVYS/HCPS.</div>
+            </div>
+            <div class="alert-item warn">
+              <div class="alert-hd">
+                <div class="ai-icon org">📦</div>
+                <div class="ai-title">Material Habis — Budi Prakoso (OP-021)</div>
+                <div class="ai-time">08:45</div>
+              </div>
+              <div class="ai-desc">Durasi: 20 menit. Benang warna Navy.</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <!-- Output per style -->
+          <div class="card" style="margin-bottom:12px">
+            <div class="st">Output per Style</div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:600">IVYS / HCPS</span><span style="color:var(--accent);font-weight:700">545 / 810 Pcs</span></div>
+                <div class="prog-wrap"><div class="prog-bar prog-g" style="width:67%"></div></div>
+                <div style="font-size:11px;color:var(--sub);margin-top:2px">67.3% tercapai</div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:600">POLO-NAVY-M04</span><span style="color:var(--warn);font-weight:700">385 / 810 Pcs</span></div>
+                <div class="prog-wrap"><div class="prog-bar prog-o" style="width:47.5%"></div></div>
+                <div style="font-size:11px;color:var(--sub);margin-top:2px">47.5% tercapai</div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:600">CORP-LOGO-A</span><span style="color:var(--danger);font-weight:700">270 / 810 Pcs</span></div>
+                <div class="prog-wrap"><div class="prog-bar prog-o" style="width:33%"></div></div>
+                <div style="font-size:11px;color:var(--sub);margin-top:2px">33.3% tercapai</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI Insight -->
+          <div class="ai-box">
+            <div class="ai-badge-txt">✦ AI INSIGHTS</div>
+            <div style="font-size:14px;font-weight:700;margin-bottom:6px">Prediksi Akhir Shift</div>
+            <div class="ai-big">92%</div>
+            <div class="ai-sub-txt">dari target harian</div>
+            <div class="ai-stat-grid">
+              <div class="ai-sb"><div class="ai-sb-l">Estimasi Final</div><div class="ai-sb-v">3,985 Pcs</div></div>
+              <div class="ai-sb"><div class="ai-sb-l">Confidence</div><div class="ai-sb-v" style="color:var(--accent)">87%</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEADER: Kelola Data Produksi -->
+    <div id="pg-ld-kelola" class="page">
+      <div class="ph">
+        <div><h1>Kelola Data Produksi</h1><p>Tambah dan atur style, lot, target, dan penugasan operator.</p></div>
+        <button class="btn btn-primary" onclick="showAddProd()">+ Tambah Data Produksi</button>
+      </div>
+
+      <!-- Add form -->
+      <div id="form-add-prod" class="card hidden" style="margin-bottom:16px;border:2px solid var(--accent)">
+        <div class="st">Tambah Data Produksi Baru</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="field-label">Style</label>
+            <input type="text" id="f-style" placeholder="Contoh: IVYS / HCPS">
+          </div>
+          <div class="form-group">
+            <label class="field-label">Lot / Batch No.</label>
+            <input type="text" id="f-lot" placeholder="Contoh: 503 + 568">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="field-label">Target Produksi (Pcs)</label>
+            <input type="number" id="f-target" placeholder="1000">
+          </div>
+          <div class="form-group">
+            <label class="field-label">Prioritas</label>
+            <select id="f-prioritas">
+              <option>Tinggi</option><option selected>Normal</option><option>Rendah</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="field-label">Operator Ditugaskan</label>
+            <select id="f-operator">
+              <option>Ega Selaclevi (OP-033)</option>
+              <option>Agus Mahendra (OP-042)</option>
+              <option>Siti Dahlia (OP-085)</option>
+              <option>Budi Prakoso (OP-021)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="field-label">Proses</label>
+            <select id="f-proses">
+              <option>Finishing</option><option>Cutting</option><option>Embroidery</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button class="btn btn-outline" onclick="hideAddProd()">Batal</button>
+          <button class="btn btn-primary" onclick="saveProd()">Simpan</button>
+        </div>
+      </div>
+
+      <div class="filter-tabs">
+        <div class="ftab active">Semua</div>
+        <div class="ftab">Sedang Berjalan</div>
+        <div class="ftab">Selesai</div>
+        <div class="ftab">Tertunda</div>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="data-table">
+          <thead>
+            <tr><th>Style</th><th>Lot</th><th>Target</th><th>Prioritas</th><th>Operator</th><th>Progress</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody id="prod-list-tbody">
+            <tr>
+              <td style="font-weight:700">IVYS / HCPS</td><td>503+568</td><td>1,080 Pcs</td>
+              <td><span class="badge badge-stop" style="background:#fff0f0;color:#c53030">Tinggi</span></td>
+              <td>Ega Selaclevi</td>
+              <td><div class="prog-wrap" style="width:100px"><div class="prog-bar prog-o" style="width:11.6%"></div></div><div style="font-size:11px;margin-top:2px;color:var(--sub)">11.6%</div></td>
+              <td><span class="badge badge-prog badge-dot">Berjalan</span></td>
+              <td><button class="act-dots">⋮</button></td>
+            </tr>
+            <tr>
+              <td style="font-weight:700">POLO-NAVY-M04</td><td>B-2023-9941</td><td>1,200 Pcs</td>
+              <td><span class="badge badge-sched">Normal</span></td>
+              <td>Siti Dahlia</td>
+              <td><div class="prog-wrap" style="width:100px"><div class="prog-bar prog-g" style="width:70%"></div></div><div style="font-size:11px;margin-top:2px;color:var(--sub)">70%</div></td>
+              <td><span class="badge badge-prog badge-dot">Berjalan</span></td>
+              <td><button class="act-dots">⋮</button></td>
+            </tr>
+            <tr>
+              <td style="font-weight:700">CORP-LOGO-A</td><td>BB-88291</td><td>810 Pcs</td>
+              <td><span class="badge badge-sched">Normal</span></td>
+              <td>Agus Mahendra</td>
+              <td><div class="prog-wrap" style="width:100px"><div class="prog-bar prog-g" style="width:75%"></div></div><div style="font-size:11px;margin-top:2px;color:var(--sub)">75%</div></td>
+              <td><span class="badge badge-prog badge-dot">Berjalan</span></td>
+              <td><button class="act-dots">⋮</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- LEADER: Monitoring Real Time -->
+    <div id="pg-ld-monitoring" class="page">
+      <div class="ph">
+        <div><h1>Monitoring Produksi Real Time</h1><p>Pantau output setiap operator dan selisih terhadap target per jam.</p></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <div style="width:8px;height:8px;background:var(--accent);border-radius:50%;animation:pulse 1.5s infinite"></div>
+          <span style="font-size:12px;font-weight:600;color:var(--accent)">LIVE</span>
+        </div>
+      </div>
+
+      <style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}</style>
+
+      <div class="stats-grid" style="margin-bottom:18px">
+        <div class="stat-c"><div class="sl">Output / Jam Ini</div><div class="sv">312 <span style="font-size:13px;font-weight:400;color:var(--sub)">Pcs</span></div><div class="ss">09:00 – 10:00</div></div>
+        <div class="stat-c"><div class="sl">Total Output</div><div class="sv">1,845</div><div class="ss up">dari 4,320 target</div></div>
+        <div class="stat-c"><div class="sl">Selisih Target</div><div class="sv" style="color:var(--warn)">-2,475</div><div class="ss">Shift masih berjalan</div></div>
+        <div class="stat-c"><div class="sl">Operator Aktif</div><div class="sv">32 <span style="font-size:13px;font-weight:400;color:var(--sub)">/35</span></div><div class="ss">3 tidak aktif</div></div>
+      </div>
+
+      <!-- Chart output per jam -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="st">Output Per Jam (Semua Operator)</div>
+        <div class="chart-area">
+          <svg viewBox="0 0 700 140" preserveAspectRatio="none">
+            <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#00c896" stop-opacity=".15"/><stop offset="100%" stop-color="#00c896" stop-opacity="0"/></linearGradient></defs>
+            <!-- target line -->
+            <line x1="0" y1="60" x2="700" y2="60" stroke="#e2e8f0" stroke-width="1.5" stroke-dasharray="6 4"/>
+            <text x="610" y="56" fill="#a0aec0" font-size="10">Target</text>
+            <!-- area -->
+            <path d="M0,120 C80,100 140,90 210,75 C280,60 340,80 420,65 C490,50 560,70 630,55 L700,48 L700,140 L0,140Z" fill="url(#cg)"/>
+            <path d="M0,120 C80,100 140,90 210,75 C280,60 340,80 420,65 C490,50 560,70 630,55 L700,48" fill="none" stroke="#00c896" stroke-width="2.5"/>
+            <!-- labels -->
+            <text x="5" y="135" fill="#a0aec0" font-size="10">07:00</text>
+            <text x="100" y="135" fill="#a0aec0" font-size="10">08:00</text>
+            <text x="200" y="135" fill="#a0aec0" font-size="10">09:00</text>
+            <text x="305" y="135" fill="#a0aec0" font-size="10">10:00</text>
+            <text x="405" y="135" fill="#a0aec0" font-size="10">11:00</text>
+            <text x="505" y="135" fill="#a0aec0" font-size="10">12:00</text>
+            <text x="610" y="135" fill="#a0aec0" font-size="10">13:00</text>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Per operator detail -->
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:15px;font-weight:700">Output Per Operator</div>
+          <div style="display:flex;gap:8px">
+            <input type="text" placeholder="Cari operator..." style="width:180px;padding:6px 10px;font-size:12px">
+            <button class="btn btn-outline btn-sm">⚙ Filter</button>
+          </div>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>Operator</th><th>Style</th><th>Jam Ini</th><th>Total Output</th><th>Target</th><th>Selisih</th><th>Efisiensi</th><th>Trend</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:8px"><div class="op-av" style="background:#2b6cb0">AM</div><div><div style="font-weight:600">Agus Mahendra</div><div style="font-size:11px;color:var(--sub)">OP-042</div></div></div></td>
+              <td>IVYS/HCPS</td><td style="font-weight:700">70</td><td>420</td><td>405</td><td style="color:var(--accent);font-weight:700">+15</td><td><span class="eff-badge eff-hi">103.7%</span></td><td style="color:var(--accent)">↗</td>
+            </tr>
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:8px"><div class="op-av" style="background:#00a87a">SD</div><div><div style="font-weight:600">Siti Dahlia</div><div style="font-size:11px;color:var(--sub)">OP-085</div></div></div></td>
+              <td>POLO-M04</td><td style="font-weight:700">65</td><td>385</td><td>405</td><td style="color:var(--warn);font-weight:700">-20</td><td><span class="eff-badge eff-hi">95.1%</span></td><td style="color:var(--accent)">↗</td>
+            </tr>
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:8px"><div class="op-av" style="background:#f6a623">BP</div><div><div style="font-weight:600">Budi Prakoso</div><div style="font-size:11px;color:var(--sub)">OP-021</div></div></div></td>
+              <td>CORP-A</td><td style="font-weight:700">50</td><td>270</td><td>405</td><td style="color:var(--danger);font-weight:700">-135</td><td><span class="eff-badge eff-lo">66.7%</span></td><td style="color:var(--danger)">↘</td>
+            </tr>
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:8px"><div class="op-av" style="background:#805ad5">ER</div><div><div style="font-weight:600">Ega Selaclevi</div><div style="font-size:11px;color:var(--sub)">OP-033</div></div></div></td>
+              <td>IVYS/HCPS</td><td style="font-weight:700">42</td><td>125</td><td>405</td><td style="color:var(--danger);font-weight:700">-280</td><td><span class="eff-badge eff-lo">30.9%</span></td><td style="color:var(--warn)">→</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- LEADER: Monitoring Kendala -->
+    <div id="pg-ld-kendala" class="page">
+      <div class="ph">
+        <div><h1>Monitoring Kendala Produksi</h1><p>Kendala yang dilaporkan oleh operator hari ini.</p></div>
+      </div>
+
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
+        <div class="stat-c"><div class="sl">Total Kendala <span>⚠</span></div><div class="sv" style="color:var(--warn)">7</div><div class="ss">Hari ini</div></div>
+        <div class="stat-c"><div class="sl">Total Downtime <span>⏱</span></div><div class="sv">94 <span style="font-size:13px;font-weight:400;color:var(--sub)">mnt</span></div><div class="ss dn">-5% vs kemarin</div></div>
+        <div class="stat-c"><div class="sl">Terbanyak</div><div class="sv" style="font-size:16px">Mesin Rusak</div><div class="ss">3 dari 7 kejadian</div></div>
+      </div>
+
+      <div class="two-col">
+        <div>
+          <div class="card">
+            <div class="st">Daftar Kendala Hari Ini</div>
+            <table class="data-table">
+              <thead><tr><th>Jam</th><th>Operator</th><th>Jenis Kendala</th><th>Durasi</th><th>Keterangan</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td>09:15</td>
+                  <td><div style="font-weight:600">Ega Selaclevi</div><div style="font-size:11px;color:var(--sub)">OP-033</div></td>
+                  <td>Mesin Rusak</td><td>15 mnt</td><td style="font-size:12px;color:var(--sub)">-</td>
+                  <td><span class="badge badge-stop">Belum Ditangani</span></td>
+                </tr>
+                <tr>
+                  <td>08:45</td>
+                  <td><div style="font-weight:600">Budi Prakoso</div><div style="font-size:11px;color:var(--sub)">OP-021</div></td>
+                  <td>Material Habis</td><td>20 mnt</td><td style="font-size:12px;color:var(--sub)">Benang Navy</td>
+                  <td><span class="badge badge-pend">Proses</span></td>
+                </tr>
+                <tr>
+                  <td>08:20</td>
+                  <td><div style="font-weight:600">Agus Mahendra</div><div style="font-size:11px;color:var(--sub)">OP-042</div></td>
+                  <td>Jarum Putus</td><td>8 mnt</td><td style="font-size:12px;color:var(--sub)">Head 4</td>
+                  <td><span class="badge badge-prog">Selesai</span></td>
+                </tr>
+                <tr>
+                  <td>07:55</td>
+                  <td><div style="font-weight:600">Siti Dahlia</div><div style="font-size:11px;color:var(--sub)">OP-085</div></td>
+                  <td>Out Set</td><td>12 mnt</td><td style="font-size:12px;color:var(--sub)">Tension longgar</td>
+                  <td><span class="badge badge-prog">Selesai</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="st">Distribusi Kendala</div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span>Mesin Rusak</span><span style="font-weight:700">3</span></div>
+              <div class="prog-wrap mb-8"><div class="prog-bar prog-r" style="width:43%"></div></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span>Material Habis</span><span style="font-weight:700">2</span></div>
+              <div class="prog-wrap mb-8"><div class="prog-bar prog-o" style="width:28%"></div></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span>Jarum Putus</span><span style="font-weight:700">1</span></div>
+              <div class="prog-wrap mb-8"><div class="prog-bar prog-g" style="width:14%"></div></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span>Out Set</span><span style="font-weight:700">1</span></div>
+              <div class="prog-wrap mb-8"><div class="prog-bar prog-g" style="width:14%"></div></div>
+            </div>
+          </div>
+
+          <div class="card mt-12">
+            <div class="st">Downtime per Jam</div>
+            <div class="dt-item"><div class="dt-ico r">⚙</div><span class="dt-label">07:00–08:00</span><span class="dt-val">12 mnt</span></div>
+            <div class="dt-item"><div class="dt-ico o">⚠</div><span class="dt-label">08:00–09:00</span><span class="dt-val dt-val r">32 mnt</span></div>
+            <div class="dt-item"><div class="dt-ico o">⚠</div><span class="dt-label">09:00–10:00</span><span class="dt-val">15 mnt</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEADER: Laporan -->
+    <div id="pg-ld-laporan" class="page">
+      <div class="ph">
+        <div><h1>Laporan Produksi</h1><p>Laporan harian produksi finishing embroidery.</p></div>
+        <div style="display:flex;gap:8px">
+          <input type="date" id="lap-date" style="padding:8px 12px;font-size:13px;border:1px solid var(--border);border-radius:8px;background:#fff">
+          <button class="btn btn-outline">⚙ Filter</button>
+          <button class="btn btn-primary" onclick="exportPDF()">📄 Export PDF</button>
+        </div>
+      </div>
+
+      <!-- Summary strip -->
+      <div class="kpi-strip mb-12">
+        <div class="kpi-item"><div class="ki-label">Total Target</div><div class="ki-val">4,320 Pcs</div></div>
+        <div class="kpi-item"><div class="ki-label">Total Aktual</div><div class="ki-val" style="color:var(--accent)">3,985 Pcs</div></div>
+        <div class="kpi-item"><div class="ki-label">% Pencapaian</div><div class="ki-val" style="color:var(--accent)">92.2%</div></div>
+        <div class="kpi-item"><div class="ki-label">Total Kendala</div><div class="ki-val" style="color:var(--warn)">7 kasus</div></div>
+        <div class="kpi-item"><div class="ki-label">Total Downtime</div><div class="ki-val" style="color:var(--warn)">94 mnt</div></div>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:15px;font-weight:700;display:flex;justify-content:space-between;align-items:center">
+          Laporan Per Style / Lot
+          <button class="btn btn-outline btn-sm" onclick="exportPDF()">↓ Export CSV</button>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr><th>Style</th><th>Lot</th><th>Target</th><th>Aktual</th><th>% Pencapaian</th><th>Kendala</th><th>Downtime</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="font-weight:700">IVYS / HCPS</td><td>503+568</td><td>1,080</td><td style="font-weight:700;color:#00a87a">1,080</td>
+              <td><span class="eff-badge eff-hi">100%</span></td><td>2</td><td>27 mnt</td>
+            </tr>
+            <tr>
+              <td style="font-weight:700">POLO-NAVY-M04</td><td>B-2023-9941</td><td>1,200</td><td style="font-weight:700;color:#00a87a">1,155</td>
+              <td><span class="eff-badge eff-hi">96.3%</span></td><td>3</td><td>44 mnt</td>
+            </tr>
+            <tr>
+              <td style="font-weight:700">CORP-LOGO-A</td><td>BB-88291</td><td>810</td><td style="font-weight:700;color:var(--warn)">608</td>
+              <td><span class="eff-badge eff-lo">75.1%</span></td><td>2</td><td>23 mnt</td>
+            </tr>
+            <tr>
+              <td style="font-weight:700">TECH-SUMMIT-CAP</td><td>BB-88304</td><td>1,230</td><td style="font-weight:700;color:var(--warn)">1,142</td>
+              <td><span class="eff-badge eff-hi">92.8%</span></td><td>0</td><td>0 mnt</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Per operator -->
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:15px;font-weight:700">Laporan Per Operator</div>
+        <table class="data-table">
+          <thead><tr><th>Operator</th><th>Style</th><th>Target</th><th>Aktual</th><th>%</th><th>Kendala</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:8px"><div class="op-av" style="background:#2b6cb0">AM</div><div><div style="font-weight:600">Agus Mahendra</div><div style="font-size:11px;color:var(--sub)">OP-042</div></div></div></td>
+              <td>IVYS/HCPS</td><td>1,080</td><td style="font-weight:700">1,080</td><td><span class="eff-badge eff-hi">100%</span></td><td>1</td>
+            </tr>
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:8px"><div class="op-av" style="background:#00a87a">SD</div><div><div style="font-weight:600">Siti Dahlia</div><div style="font-size:11px;color:var(--sub)">OP-085</div></div></div></td>
+              <td>POLO-M04</td><td>1,200</td><td style="font-weight:700">1,155</td><td><span class="eff-badge eff-hi">96.3%</span></td><td>1</td>
+            </tr>
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:8px"><div class="op-av" style="background:#f6a623">BP</div><div><div style="font-weight:600">Budi Prakoso</div><div style="font-size:11px;color:var(--sub)">OP-021</div></div></div></td>
+              <td>CORP-A</td><td>810</td><td style="font-weight:700;color:var(--warn)">608</td><td><span class="eff-badge eff-lo">75.1%</span></td><td>3</td>
+            </tr>
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:8px"><div class="op-av" style="background:#805ad5">ER</div><div><div style="font-weight:600">Ega Selaclevi</div><div style="font-size:11px;color:var(--sub)">OP-033</div></div></div></td>
+              <td>IVYS/HCPS</td><td>1,080</td><td style="font-weight:700;color:var(--danger)">142</td><td><span class="eff-badge eff-lo">13.1%</span></td><td>2</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- end main -->
+
+  <!-- MOBILE CONTENT -->
+  <div id="mob-main">
+    <!-- Mobile pages are rendered dynamically / same structure -->
+  </div>
+
+  <!-- Bottom nav -->
+  <div class="bot-nav mob-only">
+    <div class="bot-nav-inner" id="bot-nav"></div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ───
+let role = 'operator';
+let userName = 'Ega Selaclevi';
+let userID = 'OP-033';
+let currentPage = '';
+let selectedIssue = 'Out Set';
+let kendalList = [];
+let historyEntries = [
+  {jam:'07:00',qty:0,style:'-',remark:'Start Up'},
+  {jam:'08:00',qty:60,style:'IVYS/HCPS',remark:'-'},
+];
+
+const OPERATOR_MENU = [
+  {id:'op-dashboard', icon:'⊞', label:'Dashboard'},
+  {id:'op-input',     icon:'✏', label:'Input Output'},
+  {id:'op-kendala',   icon:'⚠', label:'Laporkan Kendala'},
+  {id:'op-riwayat',   icon:'📋', label:'Riwayat Produksi'},
+];
+const LEADER_MENU = [
+  {id:'ld-dashboard',  icon:'⊞', label:'Dashboard'},
+  {id:'ld-kelola',     icon:'📝', label:'Kelola Produksi'},
+  {id:'ld-monitoring', icon:'🔴', label:'Monitoring Real Time'},
+  {id:'ld-kendala',    icon:'⚠', label:'Monitoring Kendala'},
+  {id:'ld-laporan',    icon:'📊', label:'Laporan Produksi'},
+];
+
+// ─── AUTH ───
+function selectRole(r) {
+  role = r;
+  document.getElementById('rc-operator').classList.toggle('active', r==='operator');
+  document.getElementById('rc-leader').classList.toggle('active', r==='leader');
+}
+
+function doLogin() {
+  const u = document.getElementById('login-user').value.trim() || 'OP-033';
+  userID = u;
+  userName = role==='operator' ? 'Ega Selaclevi' : 'Alex Rivera';
+
+  document.getElementById('screen-login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+
+  buildSidebar();
+  buildBotNav();
+  updateUserInfo();
+  setDate();
+
+  const defaultPage = role==='operator' ? 'op-dashboard' : 'ld-dashboard';
+  navTo(defaultPage);
+}
+
+function doLogout() {
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('screen-login').classList.remove('hidden');
+}
+
+// ─── SIDEBAR ───
+function buildSidebar() {
+  const menu = role==='operator' ? OPERATOR_MENU : LEADER_MENU;
+  document.getElementById('sb-role-txt').textContent = role==='operator' ? 'Operator' : 'Leader / Admin';
+  const nav = document.getElementById('sb-nav');
+  nav.innerHTML = menu.map(m =>
+    `<div class="nav-item" id="sbn-${m.id}" onclick="navTo('${m.id}')"><span class="ni">${m.icon}</span> ${m.label}</div>`
+  ).join('');
+}
+
+function buildBotNav() {
+  const menu = role==='operator' ? OPERATOR_MENU : LEADER_MENU.slice(0,4);
+  const nav = document.getElementById('bot-nav');
+  nav.innerHTML = menu.map(m =>
+    `<div class="bn" id="bn-${m.id}" onclick="navTo('${m.id}')"><div class="bn-ic">${m.icon}</div><div>${m.label.split(' ')[0]}</div></div>`
+  ).join('');
+}
+
+function updateUserInfo() {
+  const initials = userName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('tb-avatar').textContent = initials;
+  document.getElementById('mob-avatar').textContent = initials;
+  document.getElementById('tb-name').textContent = userName;
+  document.getElementById('tb-role-label').textContent = role==='operator' ? 'Operator' : 'Leader / Admin';
+  if(document.getElementById('op-name-display')) document.getElementById('op-name-display').textContent = userName;
+}
+
+function setDate() {
+  const d = new Date().toLocaleDateString('id-ID',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  ['today-date','ld-today','riwayat-date'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.textContent=d;
+  });
+  const li=document.getElementById('lap-date');
+  if(li) li.value=new Date().toISOString().slice(0,10);
+}
+
+// ─── NAVIGATION ───
+function navTo(pageId) {
+  currentPage = pageId;
+
+  // Hide all desktop pages
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active-page'));
+  const pg = document.getElementById('pg-'+pageId);
+  if(pg) pg.classList.add('active-page');
+
+  // Sidebar active
+  document.querySelectorAll('.sb-nav .nav-item').forEach(n=>n.classList.remove('active'));
+  const sbn = document.getElementById('sbn-'+pageId);
+  if(sbn) sbn.classList.add('active');
+
+  // Bot nav active
+  document.querySelectorAll('.bn').forEach(b=>b.classList.remove('active'));
+  const bn = document.getElementById('bn-'+pageId);
+  if(bn) bn.classList.add('active');
+
+  closeSidebar();
+  refreshPage(pageId);
+}
+
+function refreshPage(id) {
+  if(id==='op-riwayat') renderRiwayat();
+  if(id==='op-dashboard') renderDashboard();
+  if(id==='pg-ld-kelola') {}
+}
+
+// ─── OPERATOR ACTIONS ───
+function saveEntry() {
+  const qty = parseInt(document.getElementById('inp-qty').value)||0;
+  const style = document.getElementById('inp-style-sel').value;
+  historyEntries.push({jam:'09:00',qty,style,remark:'-'});
+
+  // Update hourly list
+  const li = document.getElementById('hourly-list');
+  li.innerHTML += `<div class="hourly-row"><div class="h-time cur">09:00</div><div style="flex:1"><div style="font-size:11px;color:var(--label)">ACTUAL</div><div class="h-val">${qty}</div></div><div class="h-remark">-</div><div class="h-icon" style="color:var(--accent)">✓</div></div>`;
+
+  showToast('✓ Input 09:00 berhasil disimpan!');
+  renderDashboard();
+}
+
+function saveKendala() {
+  const jam = document.getElementById('kendala-jam').value;
+  const dur = document.getElementById('kendala-dur').value;
+  const ket = document.getElementById('kendala-ket').value;
+  kendalList.push({jam,dur,jenis:selectedIssue,ket});
+
+  document.getElementById('kendala-list-mini').innerHTML = kendalList.map(k=>
+    `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:12px"><strong>${k.jam}</strong> — ${k.jenis} (${k.dur} mnt)</div>`
+  ).join('');
+
+  showToast('✓ Kendala berhasil dilaporkan!');
+  navTo('op-dashboard');
+}
+
+function selIssue(el, name) {
+  selectedIssue = name;
+  document.querySelectorAll('.issue-card').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function renderDashboard() {
+  const total = historyEntries.reduce((s,e)=>s+e.qty,0);
+  const pct = (total/1080*100).toFixed(1);
+  const el = v => document.getElementById(v);
+  if(el('op-output-today')) el('op-output-today').innerHTML = `${total} <span style="font-size:14px;font-weight:400;color:var(--sub)">Pcs</span>`;
+  if(el('op-pct')) el('op-pct').innerHTML = `${pct} <span style="font-size:14px;font-weight:400;color:var(--sub)">%</span>`;
+  if(el('op-pct-bar')) el('op-pct-bar').style.width = pct+'%';
+  if(el('sum-total')) el('sum-total').textContent = total+' Pcs';
+  if(el('sum-kendala')) el('sum-kendala').textContent = kendalList.length;
+
+  if(el('op-history-preview')) {
+    if(historyEntries.length===0) {
+      el('op-history-preview').innerHTML = '<div style="color:var(--sub);font-size:13px;padding:12px 0;text-align:center">Belum ada data input hari ini.</div>';
+    } else {
+      el('op-history-preview').innerHTML = historyEntries.slice(-3).map(e=>`
+        <div class="hourly-row" style="padding:8px 0">
+          <div class="h-time">${e.jam}</div>
+          <div style="flex:1"><div style="font-size:12px;color:var(--sub)">${e.style}</div></div>
+          <div style="font-weight:700;font-size:16px">${e.qty} <span style="font-size:11px;font-weight:400;color:var(--sub)">pcs</span></div>
+          <div class="h-icon" style="color:var(--accent)">✓</div>
+        </div>
+      `).join('');
+    }
+  }
+}
+
+function renderRiwayat() {
+  const tbody = document.getElementById('riwayat-tbody');
+  if(!tbody) return;
+  tbody.innerHTML = historyEntries.map(e=>{
+    const selisih = e.qty - 135;
+    const status = e.qty===0 ? '<span class="badge badge-sched">Start Up</span>'
+                 : e.qty>=135 ? '<span class="badge badge-prog">Tercapai</span>'
+                 : '<span class="badge badge-pend">Di Bawah Target</span>';
+    return `<tr>
+      <td>${e.jam}</td><td>${e.style}</td>
+      <td style="font-weight:700">${e.qty}</td><td>135</td>
+      <td style="color:${selisih>=0?'var(--accent)':'var(--danger)'};font-weight:600">${selisih>=0?'+':''}${selisih}</td>
+      <td>${status}</td>
+    </tr>`;
+  }).join('');
+
+  const total = historyEntries.reduce((s,e)=>s+e.qty,0);
+  const kr = document.getElementById('kendala-list-riwayat');
+  if(kr) {
+    kr.innerHTML = kendalList.length===0
+      ? '<div style="color:var(--sub);font-size:12px;text-align:center;padding:10px 0">Tidak ada kendala hari ini. ✓</div>'
+      : kendalList.map(k=>`<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:12px"><strong>${k.jam}</strong> — ${k.jenis} (${k.dur} mnt) ${k.ket?'— '+k.ket:''}</div>`).join('');
+  }
+}
+
+// ─── LEADER ACTIONS ───
+function showAddProd() {
+  document.getElementById('form-add-prod').classList.remove('hidden');
+}
+function hideAddProd() {
+  document.getElementById('form-add-prod').classList.add('hidden');
+}
+function saveProd() {
+  const style = document.getElementById('f-style').value;
+  const lot = document.getElementById('f-lot').value;
+  const target = document.getElementById('f-target').value;
+  const prio = document.getElementById('f-prioritas').value;
+  const op = document.getElementById('f-operator').value.split(' ')[0]+' '+document.getElementById('f-operator').value.split(' ')[1];
+  const tbody = document.getElementById('prod-list-tbody');
+  tbody.innerHTML += `<tr>
+    <td style="font-weight:700">${style||'-'}</td><td>${lot||'-'}</td><td>${parseInt(target||0).toLocaleString()} Pcs</td>
+    <td><span class="badge badge-sched">${prio}</span></td>
+    <td>${op}</td>
+    <td><div class="prog-wrap" style="width:100px"><div class="prog-bar prog-o" style="width:0%"></div></div><div style="font-size:11px;margin-top:2px;color:var(--sub)">0%</div></td>
+    <td><span class="badge badge-sched">Terjadwal</span></td>
+    <td><button class="act-dots">⋮</button></td>
+  </tr>`;
+  hideAddProd();
+  showToast('✓ Data produksi berhasil ditambahkan!');
+}
+
+function exportPDF() {
+  showToast('📄 Menyiapkan laporan PDF...');
+  setTimeout(()=>showToast('✓ Laporan PDF siap diunduh!'),1500);
+}
+
+// ─── FILTER TABS ───
+document.addEventListener('click', e=>{
+  if(e.target.classList.contains('ftab')) {
+    e.target.closest('.filter-tabs').querySelectorAll('.ftab').forEach(t=>t.classList.remove('active'));
+    e.target.classList.add('active');
+  }
+  if(e.target.classList.contains('tab-btn')) {
+    e.target.closest('.tab-nav').querySelectorAll('.tab-btn').forEach(t=>t.classList.remove('active'));
+    e.target.classList.add('active');
+  }
+});
+
+// ─── TOAST ───
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  if(!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;padding:11px 22px;border-radius:30px;font-size:13px;font-weight:600;z-index:9999;transition:opacity .3s;white-space:nowrap';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.style.opacity='0', 2500);
+}
+
+// ─── SIDEBAR (mobile) ───
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+}
+
+// ─── INIT ───
+window.addEventListener('DOMContentLoaded', ()=>{
+  setDate();
+});
+</script>
+</body>
+</html>
