@@ -1,0 +1,22 @@
+[build]
+  publish = "."
+
+[[redirects]]
+  from = "/*"
+  to = "/index.php"
+  status = 200
+
+[[redirects]]
+  from = "/"
+  to = "/index.php"
+  status = 200
+
+[[redirects]]
+  from = "/auth/login"
+  to = "/auth/login.php"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
