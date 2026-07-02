@@ -3,20 +3,56 @@
  * =====================================================
  * FILE: config/firebase.php
  * FUNGSI: Koneksi ke Firebase via REST API
- * VERSION: 6.0 - No curl_close, No output
+ * VERSION: 7.0 - Fixed Environment Variables + curl_close
  * =====================================================
  */
 
 class FirebaseConfig {
     private static $auth = null;
     private static $database = null;
+    private static $apiKey = null;
+    private static $databaseUrl = null;
     
+    /**
+     * Get API Key dari environment variable
+     */
     public static function getApiKey() {
-        return 'AIzaSyAjVROuwHCfhUQDrA7Xek-CsyjsQpcFrHs'; // Ganti!
+        if (self::$apiKey === null) {
+            // 🔥 Ambil dari environment variable (Vercel / Render / Local)
+            self::$apiKey = getenv('FIREBASE_API_KEY');
+            
+            // Fallback: dari $_ENV
+            if (!self::$apiKey) {
+                self::$apiKey = $_ENV['FIREBASE_API_KEY'] ?? null;
+            }
+            
+            // Kalo masih kosong, throw error
+            if (!self::$apiKey) {
+                throw new Exception('FIREBASE_API_KEY not set in environment variables');
+            }
+        }
+        return self::$apiKey;
     }
     
+    /**
+     * Get Database URL dari environment variable
+     */
     public static function getDatabaseUrl() {
-        return 'https://perizinan-db492-default-rtdb.asia-southeast1.firebasedatabase.app';
+        if (self::$databaseUrl === null) {
+            // 🔥 Ambil dari environment variable (Vercel / Render / Local)
+            self::$databaseUrl = getenv('FIREBASE_DATABASE_URL');
+            
+            // Fallback: dari $_ENV
+            if (!self::$databaseUrl) {
+                self::$databaseUrl = $_ENV['FIREBASE_DATABASE_URL'] ?? null;
+            }
+            
+            // Kalo masih kosong, throw error
+            if (!self::$databaseUrl) {
+                throw new Exception('FIREBASE_DATABASE_URL not set in environment variables');
+            }
+        }
+        return self::$databaseUrl;
     }
 
     public static function getAuth() {
@@ -34,6 +70,9 @@ class FirebaseConfig {
     }
 }
 
+// ============================================
+// REST AUTH CLASS
+// ============================================
 class RestAuth {
     private $apiKey;
     
@@ -41,6 +80,9 @@ class RestAuth {
         $this->apiKey = $apiKey;
     }
     
+    /**
+     * Login dengan email dan password
+     */
     public function signInWithEmailAndPassword($email, $password) {
         $url = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" . $this->apiKey;
         
@@ -57,10 +99,11 @@ class RestAuth {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        // ❌ HAPUS: curl_close($ch);
+        curl_close($ch);
         
         if ($httpCode === 200) {
             $result = json_decode($response);
@@ -68,7 +111,9 @@ class RestAuth {
                 'firebaseUserId' => $result->localId,
                 'uid' => $result->localId,
                 'idToken' => $result->idToken,
-                'email' => $result->email
+                'email' => $result->email,
+                'refreshToken' => $result->refreshToken ?? null,
+                'expiresIn' => $result->expiresIn ?? null
             ];
         } else {
             $error = json_decode($response);
@@ -77,6 +122,9 @@ class RestAuth {
         }
     }
     
+    /**
+     * Register user baru
+     */
     public function createUserWithEmailAndPassword($email, $password) {
         $url = "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=" . $this->apiKey;
         
@@ -93,10 +141,11 @@ class RestAuth {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        // ❌ HAPUS: curl_close($ch);
+        curl_close($ch);
         
         if ($httpCode === 200) {
             $result = json_decode($response);
@@ -114,6 +163,9 @@ class RestAuth {
     }
 }
 
+// ============================================
+// REST DATABASE CLASS
+// ============================================
 class RestDatabase {
     private $baseUrl;
     private $apiKey;
@@ -128,12 +180,17 @@ class RestDatabase {
     }
 }
 
+// ============================================
+// REST REFERENCE CLASS
+// ============================================
 class RestReference {
     private $baseUrl;
     private $path;
     private $apiKey;
     private $orderBy = null;
     private $equalTo = null;
+    private $limitToFirst = null;
+    private $limitToLast = null;
     
     public function __construct($baseUrl, $path, $apiKey) {
         $this->baseUrl = $baseUrl;
@@ -151,57 +208,55 @@ class RestReference {
         if ($this->equalTo !== null) {
             $params[] = 'equalTo="' . $this->equalTo . '"';
         }
+        if ($this->limitToFirst !== null) {
+            $params[] = 'limitToFirst=' . $this->limitToFirst;
+        }
+        if ($this->limitToLast !== null) {
+            $params[] = 'limitToLast=' . $this->limitToLast;
+        }
         
         return $url . '?' . implode('&', $params);
     }
     
-    public function getValue() {
-        $url = $this->buildUrl();
-        
+    private function sendRequest($url, $method = 'GET', $data = null) {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        
+        if ($data !== null) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        }
         
         $response = curl_exec($ch);
-        // ❌ HAPUS: curl_close($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
         
-        return json_decode($response, true);
+        return [
+            'body' => $response,
+            'httpCode' => $httpCode
+        ];
+    }
+    
+    public function getValue() {
+        $url = $this->buildUrl();
+        $response = $this->sendRequest($url);
+        return json_decode($response['body'], true);
     }
     
     public function set($value) {
         $url = $this->baseUrl . '/' . $this->path . '.json?auth=' . $this->apiKey;
-        
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($value));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        
-        $response = curl_exec($ch);
-        // ❌ HAPUS: curl_close($ch);
-        
-        return json_decode($response, true);
+        $response = $this->sendRequest($url, 'PUT', $value);
+        return json_decode($response['body'], true);
     }
     
     public function push($value) {
         $url = $this->baseUrl . '/' . $this->path . '.json?auth=' . $this->apiKey;
-        
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($value));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        
-        $response = curl_exec($ch);
-        // ❌ HAPUS: curl_close($ch);
-        
-        $result = json_decode($response, true);
+        $response = $this->sendRequest($url, 'POST', $value);
+        $result = json_decode($response['body'], true);
         $key = $result['name'] ?? null;
         
         return (object)[
@@ -211,19 +266,14 @@ class RestReference {
     
     public function update($value) {
         $url = $this->baseUrl . '/' . $this->path . '.json?auth=' . $this->apiKey;
-        
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PATCH');
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($value));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        
-        $response = curl_exec($ch);
-        // ❌ HAPUS: curl_close($ch);
-        
-        return json_decode($response, true);
+        $response = $this->sendRequest($url, 'PATCH', $value);
+        return json_decode($response['body'], true);
+    }
+    
+    public function delete() {
+        $url = $this->baseUrl . '/' . $this->path . '.json?auth=' . $this->apiKey;
+        $response = $this->sendRequest($url, 'DELETE');
+        return json_decode($response['body'], true);
     }
     
     public function orderByChild($field) {
@@ -236,20 +286,30 @@ class RestReference {
         return $this;
     }
     
+    public function limitToFirst($limit) {
+        $this->limitToFirst = $limit;
+        return $this;
+    }
+    
+    public function limitToLast($limit) {
+        $this->limitToLast = $limit;
+        return $this;
+    }
+    
     public function getSnapshot() {
         $data = $this->getValue();
         return (object)[
-            'numChildren' => function() use ($data) {
-                return is_array($data) ? count($data) : 0;
-            }
+            'exists' => $data !== null,
+            'numChildren' => is_array($data) ? count($data) : 0,
+            'getValue' => function() use ($data) { return $data; }
         ];
     }
 }
 
-// ❌ HAPUS SELURUH BAGIAN INI (test connection)
-// if (basename($_SERVER['PHP_SELF']) === 'firebase.php') { ... }
-
-// ✅ Inisialisasi
-$auth = FirebaseConfig::getAuth();
-$database = FirebaseConfig::getDatabase();
+// ============================================
+// ✅ INISIALISASI (Panggil di file yang butuh)
+// ============================================
+// HAPUS baris ini! Panggil di file yang butuh aja:
+// $auth = FirebaseConfig::getAuth();
+// $database = FirebaseConfig::getDatabase();
 ?>
