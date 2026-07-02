@@ -3,7 +3,7 @@
  * =====================================================
  * FILE: config/supabase.php
  * FUNGSI: Upload file ke Supabase Storage
- * VERSION: FINAL - Fixed Environment Variables
+ * VERSION: 8.0 - Removed curl_close() for PHP 8.5+
  * =====================================================
  */
 
@@ -18,17 +18,12 @@ class SupabaseConfig {
      */
     private static function getProjectUrl() {
         if (self::$projectUrl === null) {
-            // 🔥 Ambil dari environment variable (Vercel / Render)
+            // 🔥 Ambil dari environment variable
             self::$projectUrl = getenv('SUPABASE_URL');
             
-            // Fallback: dari $_ENV (buat local)
+            // Fallback: dari $_ENV
             if (!self::$projectUrl) {
                 self::$projectUrl = $_ENV['SUPABASE_URL'] ?? null;
-            }
-            
-            // Fallback: dari define (kalo ada)
-            if (!self::$projectUrl && defined('SUPABASE_URL')) {
-                self::$projectUrl = SUPABASE_URL;
             }
             
             // Kalo masih kosong, throw error
@@ -46,17 +41,12 @@ class SupabaseConfig {
      */
     private static function getApiKey() {
         if (self::$apiKey === null) {
-            // 🔥 Ambil dari environment variable (Vercel / Render)
+            // 🔥 Ambil dari environment variable
             self::$apiKey = getenv('SUPABASE_ANON_KEY');
             
-            // Fallback: dari $_ENV (buat local)
+            // Fallback: dari $_ENV
             if (!self::$apiKey) {
                 self::$apiKey = $_ENV['SUPABASE_ANON_KEY'] ?? null;
-            }
-            
-            // Fallback: dari define (kalo ada)
-            if (!self::$apiKey && defined('SUPABASE_ANON_KEY')) {
-                self::$apiKey = SUPABASE_ANON_KEY;
             }
             
             // Kalo masih kosong, throw error
@@ -80,11 +70,6 @@ class SupabaseConfig {
                 self::$bucket = $_ENV['SUPABASE_BUCKET'] ?? null;
             }
             
-            // Fallback: dari define
-            if (!self::$bucket && defined('SUPABASE_BUCKET')) {
-                self::$bucket = SUPABASE_BUCKET;
-            }
-            
             // Default kalo gak ada
             if (!self::$bucket) {
                 self::$bucket = 'documents';
@@ -101,12 +86,38 @@ class SupabaseConfig {
     }
 
     /**
+     * Send HTTP Request - Tanpa curl_close()
+     */
+    private static function sendRequest($url, $method = 'GET', $data = null, $headers = []) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        
+        if (!empty($headers)) {
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        }
+        
+        if ($data !== null) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+        }
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        // ✅ HAPUS curl_close($ch) - DEPRECATED di PHP 8.5+
+        
+        return [
+            'body' => $response,
+            'httpCode' => $httpCode,
+            'error' => $curlError
+        ];
+    }
+
+    /**
      * Upload file ke Supabase Storage
-     * 
-     * @param string $localPath Path file lokal
-     * @param string $destinationPath Path tujuan di bucket
-     * @param array $options Opsi tambahan
-     * @return string|null URL publik file atau null jika gagal
      */
     public static function uploadFile($localPath, $destinationPath, $options = []) {
         self::$lastError = null;
@@ -115,7 +126,6 @@ class SupabaseConfig {
             $projectUrl = self::getProjectUrl();
             $apiKey = self::getApiKey();
             $bucket = self::getBucket();
-            
         } catch (Exception $e) {
             self::$lastError = $e->getMessage();
             return null;
@@ -150,7 +160,7 @@ class SupabaseConfig {
             return null;
         }
 
-        // Validasi tipe file (opsional)
+        // Validasi tipe file
         if (!empty($options['allowedMimeTypes'])) {
             if (!in_array($mimeType, $options['allowedMimeTypes'])) {
                 self::$lastError = 'Tipe file tidak diizinkan: ' . $mimeType;
@@ -161,42 +171,32 @@ class SupabaseConfig {
         // Build URL
         $url = $projectUrl . '/storage/v1/object/' . $bucket . '/' . ltrim($destinationPath, '/');
 
-        // Siapkan CURL
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $fileData);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        // Headers
+        $headers = [
             'Content-Type: ' . $mimeType,
             'Authorization: Bearer ' . $apiKey,
             'Content-Length: ' . $fileSize
-        ]);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        ];
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        curl_close($ch);
+        // Upload
+        $response = self::sendRequest($url, 'POST', $fileData, $headers);
 
         // Handle response
-        if ($httpCode === 200 || $httpCode === 201) {
-            // Upload sukses - return public URL
+        if ($response['httpCode'] === 200 || $response['httpCode'] === 201) {
             return $projectUrl . '/storage/v1/object/public/' . $bucket . '/' . ltrim($destinationPath, '/');
         }
 
         // Handle error
-        if ($httpCode === 401 || $httpCode === 403) {
+        if ($response['httpCode'] === 401 || $response['httpCode'] === 403) {
             self::$lastError = 'API Key tidak valid atau tidak punya akses!';
-        } elseif ($httpCode === 404) {
+        } elseif ($response['httpCode'] === 404) {
             self::$lastError = 'Bucket "' . $bucket . '" tidak ditemukan!';
-        } elseif ($httpCode === 413) {
+        } elseif ($response['httpCode'] === 413) {
             self::$lastError = 'File terlalu besar untuk bucket ini!';
-        } elseif ($curlError) {
-            self::$lastError = 'CURL Error: ' . $curlError;
+        } elseif ($response['error']) {
+            self::$lastError = 'CURL Error: ' . $response['error'];
         } else {
-            self::$lastError = 'HTTP ' . $httpCode . ': ' . substr($response, 0, 100);
+            self::$lastError = 'HTTP ' . $response['httpCode'] . ': ' . substr($response['body'], 0, 100);
         }
 
         return null;
@@ -212,33 +212,24 @@ class SupabaseConfig {
             $projectUrl = self::getProjectUrl();
             $apiKey = self::getApiKey();
             $bucket = self::getBucket();
-            
         } catch (Exception $e) {
             self::$lastError = $e->getMessage();
             return false;
         }
 
         $url = $projectUrl . '/storage/v1/object/' . $bucket . '/' . ltrim($path, '/');
-
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        
+        $headers = [
             'Authorization: Bearer ' . $apiKey
-        ]);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        ];
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        $response = self::sendRequest($url, 'DELETE', null, $headers);
 
-        if ($httpCode === 200 || $httpCode === 204) {
+        if ($response['httpCode'] === 200 || $response['httpCode'] === 204) {
             return true;
         }
 
-        self::$lastError = 'Gagal hapus file: HTTP ' . $httpCode;
+        self::$lastError = 'Gagal hapus file: HTTP ' . $response['httpCode'];
         return false;
     }
 
@@ -250,32 +241,24 @@ class SupabaseConfig {
             $projectUrl = self::getProjectUrl();
             $apiKey = self::getApiKey();
             $bucket = self::getBucket();
-            
         } catch (Exception $e) {
             return ['success' => false, 'message' => '❌ ' . $e->getMessage()];
         }
 
         $url = $projectUrl . '/storage/v1/bucket/' . $bucket;
-
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        
+        $headers = [
             'Authorization: Bearer ' . $apiKey
-        ]);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        ];
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        $response = self::sendRequest($url, 'GET', null, $headers);
 
-        if ($httpCode === 200) {
+        if ($response['httpCode'] === 200) {
             return ['success' => true, 'message' => '✅ Koneksi ke Supabase berhasil!'];
-        } elseif ($httpCode === 404) {
+        } elseif ($response['httpCode'] === 404) {
             return ['success' => false, 'message' => '❌ Bucket "' . $bucket . '" tidak ditemukan!'];
         } else {
-            return ['success' => false, 'message' => '❌ HTTP ' . $httpCode . ': ' . substr($response, 0, 100)];
+            return ['success' => false, 'message' => '❌ HTTP ' . $response['httpCode'] . ': ' . substr($response['body'], 0, 100)];
         }
     }
 }
