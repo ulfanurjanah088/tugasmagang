@@ -3,7 +3,7 @@
  * =====================================================
  * FILE: config/firebase.php
  * FUNGSI: Koneksi ke Firebase via REST API
- * VERSION: 7.0 - Fixed Environment Variables + curl_close
+ * VERSION: 8.0 - Removed curl_close() for PHP 8.5+
  * =====================================================
  */
 
@@ -18,7 +18,7 @@ class FirebaseConfig {
      */
     public static function getApiKey() {
         if (self::$apiKey === null) {
-            // 🔥 Ambil dari environment variable (Vercel / Render / Local)
+            // 🔥 Ambil dari environment variable
             self::$apiKey = getenv('FIREBASE_API_KEY');
             
             // Fallback: dari $_ENV
@@ -39,7 +39,7 @@ class FirebaseConfig {
      */
     public static function getDatabaseUrl() {
         if (self::$databaseUrl === null) {
-            // 🔥 Ambil dari environment variable (Vercel / Render / Local)
+            // 🔥 Ambil dari environment variable
             self::$databaseUrl = getenv('FIREBASE_DATABASE_URL');
             
             // Fallback: dari $_ENV
@@ -81,8 +81,28 @@ class RestAuth {
     }
     
     /**
-     * Login dengan email dan password
+     * Send HTTP Request - Tanpa curl_close()
      */
+    private function sendRequest($url, $data, $method = 'POST') {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        
+        $body = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        // ✅ HAPUS curl_close($ch) - DEPRECATED di PHP 8.5+
+        
+        return [
+            'body' => $body,
+            'httpCode' => $httpCode
+        ];
+    }
+    
     public function signInWithEmailAndPassword($email, $password) {
         $url = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" . $this->apiKey;
         
@@ -92,21 +112,10 @@ class RestAuth {
             'returnSecureToken' => true
         ];
         
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        $response = $this->sendRequest($url, $data);
         
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        
-        if ($httpCode === 200) {
-            $result = json_decode($response);
+        if ($response['httpCode'] === 200) {
+            $result = json_decode($response['body']);
             return (object)[
                 'firebaseUserId' => $result->localId,
                 'uid' => $result->localId,
@@ -116,15 +125,12 @@ class RestAuth {
                 'expiresIn' => $result->expiresIn ?? null
             ];
         } else {
-            $error = json_decode($response);
+            $error = json_decode($response['body']);
             $message = $error->error->message ?? 'Unknown error';
             throw new Exception('Login gagal: ' . $message);
         }
     }
     
-    /**
-     * Register user baru
-     */
     public function createUserWithEmailAndPassword($email, $password) {
         $url = "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=" . $this->apiKey;
         
@@ -134,21 +140,10 @@ class RestAuth {
             'returnSecureToken' => true
         ];
         
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        $response = $this->sendRequest($url, $data);
         
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        
-        if ($httpCode === 200) {
-            $result = json_decode($response);
+        if ($response['httpCode'] === 200) {
+            $result = json_decode($response['body']);
             return (object)[
                 'firebaseUserId' => $result->localId,
                 'uid' => $result->localId,
@@ -156,7 +151,7 @@ class RestAuth {
                 'email' => $result->email
             ];
         } else {
-            $error = json_decode($response);
+            $error = json_decode($response['body']);
             $message = $error->error->message ?? 'Unknown error';
             throw new Exception('Registrasi gagal: ' . $message);
         }
@@ -218,6 +213,9 @@ class RestReference {
         return $url . '?' . implode('&', $params);
     }
     
+    /**
+     * Send HTTP Request - Tanpa curl_close()
+     */
     private function sendRequest($url, $method = 'GET', $data = null) {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -233,7 +231,7 @@ class RestReference {
         
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        // ✅ HAPUS curl_close($ch) - DEPRECATED di PHP 8.5+
         
         return [
             'body' => $response,
@@ -307,9 +305,9 @@ class RestReference {
 }
 
 // ============================================
-// ✅ INISIALISASI (Panggil di file yang butuh)
-// ============================================
-// HAPUS baris ini! Panggil di file yang butuh aja:
+// ✅ JANGAN PANGGIL DI SINI!
+// Panggil di file yang butuh aja:
 // $auth = FirebaseConfig::getAuth();
 // $database = FirebaseConfig::getDatabase();
+// ============================================
 ?>
