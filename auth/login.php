@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magang.usg — Manajemen Cuti Karyawan</title>
+    <title>sistem.perizinan.cuti — Manajemen Cuti Karyawan</title>
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css">
     <style>
@@ -134,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
         </nav>
         <div class="login-hero-content">
             <span class="login-eyebrow">Edisi 2025</span>
-            <h1>Manajemen Cuti<br><span class="brand">Magang.usg</span></h1>
+            <h1>Manajemen Cuti<br><span class="brand">sistem.perizinan.cuti</span></h1>
             <p>Sistem manajemen cuti karyawan yang modern, terintegrasi, dan sepenuhnya transparan untuk mendukung produktivitas tim Anda.</p>
             <div class="login-features">
                 <div class="login-feature">
@@ -338,7 +338,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
                     <a href="#">Kontak</a>
                 </div>
                 <div style="text-align:center;padding:8px;font-size:11px;color:var(--clr-muted);background:#F2F2F2;">
-                    © <?= date('Y') ?> Magang.usg &nbsp;·&nbsp; v2.5.0
+                    © <?= date('Y') ?> sistem.perizinan.cuti &nbsp;·&nbsp; v2.5.0
                 </div>
             </div>
         </div>

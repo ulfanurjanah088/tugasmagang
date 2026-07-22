@@ -207,7 +207,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password'])) {
         <?php endif; ?>
         
         <div style="text-align:center;margin-top:16px;font-size:11px;color:#ccc;border-top:1px solid #eee;padding-top:12px;">
-            &copy; <?= date('Y') ?> Magang.usg
+            &copy; <?= date('Y') ?> sistem.perizinan.cuti
         </div>
     </div>
 </body>

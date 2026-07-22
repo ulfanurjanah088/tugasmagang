@@ -12,7 +12,7 @@
     <div class="footer-brand">
         <strong style="font-size:16px;font-family:var(--font-display);">Magang<span style="color:var(--clr-primary);">.usg</span></strong>
         <br>
-        <small style="color:var(--clr-muted);font-size:12px;">© <?= date('Y') ?> Magang.usg - Manajemen Cuti Karyawan</small>
+        <small style="color:var(--clr-muted);font-size:12px;">© <?= date('Y') ?> sistem.perizinan.cuti - Manajemen Cuti Karyawan</small>
     </div>
     <div class="footer-links">
         <a href="#">Panduan</a>

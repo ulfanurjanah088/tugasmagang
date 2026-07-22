@@ -91,7 +91,7 @@ $html = '
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Laporan Eksekutif Cuti - Magang.usg</title>
+    <title>Laporan Eksekutif Cuti - sistem.perizinan.cuti</title>
     <style>
         /* ========== RESET ========== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -405,8 +405,8 @@ $html .= '
         <div class="meta-item"><strong>Status:</strong> ' . $statusCount['Disetujui'] . ' Disetujui · ' . $statusCount['Ditolak'] . ' Ditolak · ' . $statusCount['Menunggu'] . ' Menunggu</div>
     </div>
     <div class="footer-text">
-        Laporan ini dibuat secara otomatis oleh sistem Magang.usg<br>
-        © ' . date('Y') . ' Magang.usg - All Rights Reserved
+        Laporan ini dibuat secara otomatis oleh sistem sistem.perizinan.cuti<br>
+        © ' . date('Y') . ' sistem.perizinan.cuti - All Rights Reserved
     </div>
 </div>';
 
@@ -680,7 +680,7 @@ $html .= '
 $html .= '
 <!-- ========== FOOTER ========== -->
 <div class="report-footer">
-    <span>© ' . date('Y') . ' Magang.usg - Sistem Manajemen Cuti</span>
+    <span>© ' . date('Y') . ' sistem.perizinan.cuti - Sistem Manajemen Cuti</span>
     <span>Laporan dibuat otomatis oleh sistem | ' . date('d/m/Y H:i:s') . '</span>
 </div>
 
@@ -696,7 +696,7 @@ $html .= '
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Cetak Laporan PDF - Magang.usg</title>
+    <title>Cetak Laporan PDF - sistem.perizinan.cuti</title>
     <style>
         body { 
             font-family: "Segoe UI", Arial, sans-serif; 

@@ -37,7 +37,7 @@ if (isset($database) && isset($uid)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Magang.usg — Manajemen Cuti Karyawan</title>
+    <title>sistem.perizinan.cuti — Manajemen Cuti Karyawan</title>
     
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css">

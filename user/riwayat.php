@@ -474,7 +474,7 @@ include __DIR__ . '/../includes/header.php';
         <?php endif; ?>
     </div>
 
-    <div class="mobile-footer-txt">Magang.usg &copy; <?= date('Y') ?></div>
+    <div class="mobile-footer-txt">sistem.perizinan.cuti &copy; <?= date('Y') ?></div>
 </div>
 
 <!-- =====================================================
