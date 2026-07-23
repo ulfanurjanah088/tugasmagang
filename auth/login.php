@@ -134,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
         </nav>
         <div class="login-hero-content">
             <span class="login-eyebrow">Edisi 2026</span>
-            <h1>sistem-perizinan<br><span class="brand">sistem.perizinan.cuti</span></h1>
+            <h1>sistem-perizinan<br><span class="brand">cuti</span></h1>
             <p>Sistem manajemen cuti karyawan yang modern, terintegrasi, dan sepenuhnya transparan untuk mendukung produktivitas tim Anda.</p>
             <div class="login-features">
                 <div class="login-feature">
