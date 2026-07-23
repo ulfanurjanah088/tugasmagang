@@ -99,7 +99,7 @@ include __DIR__ . '/../includes/header.php';
 
 <div class="layout-with-sidebar page-with-mobile-nav">
     <aside class="sidebar">
-        <div class="sidebar-logo">sistem-perizinan<span>.cuti</span><br><small style="font-size:11px;font-weight:400;color:rgba(255,255,255,.4);">Admin Panel</small></div>
+        <div class="sidebar-logo">Sistem Perizinan<span>Cuti</span><br><small style="font-size:11px;font-weight:400;color:rgba(255,255,255,.4);">Admin Panel</small></div>
         <div class="sidebar-item" onclick="window.location.href='index.php'"><i class="ri-file-search-line"></i> Review</div>
         <div class="sidebar-item" onclick="window.location.href='riwayat.php'"><i class="ri-history-line"></i> Riwayat</div>
         <div class="sidebar-item active"><i class="ri-file-chart-line"></i> Laporan</div>
