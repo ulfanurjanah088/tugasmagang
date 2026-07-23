@@ -319,7 +319,7 @@ include __DIR__ . '/../includes/header.php';
      ===================================================== -->
 <div id="desktop-history-view" class="layout-with-sidebar page-with-mobile-nav">
     <aside class="sidebar">
-        <div class="sidebar-logo">Magang<span>.usg</span><br><small style="font-size:11px;font-weight:400;color:rgba(255,255,255,.4);">Cuti Karyawan</small></div>
+        <div class="sidebar-logo">sistem-perizinan<span>.cuti</span><br><small style="font-size:11px;font-weight:400;color:rgba(255,255,255,.4);">Cuti Karyawan</small></div>
         <div class="sidebar-item" onclick="window.location.href='../user/index.php'"><i class="ri-dashboard-line"></i> Dashboard</div>
         <div class="sidebar-item" onclick="window.location.href='../user/index.php#ajukan-cuti'"><i class="ri-add-circle-line"></i> Ajukan Cuti</div>
         <div class="sidebar-item active"><i class="ri-history-line"></i> Riwayat</div>

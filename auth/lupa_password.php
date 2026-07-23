@@ -168,7 +168,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password'])) {
 </head>
 <body>
     <div class="card">
-        <div class="logo">Magang<span>.usg</span></div>
+        <div class="logo">sistem-perizinan<span>.cuti</span></div>
         <div class="subtitle">Reset Password - Debug Mode</div>
         
         <?php if ($error): ?>

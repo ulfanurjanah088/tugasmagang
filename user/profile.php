@@ -320,7 +320,7 @@ include __DIR__ . '/../includes/header.php';
 <div class="layout-with-sidebar page-with-mobile-nav">
     <aside class="sidebar">
         <div class="sidebar-logo">
-            Magang<span>.usg</span>
+            sistem-perizinan<span>.cuti</span>
             <br><small style="font-size:11px;font-weight:400;color:rgba(255,255,255,.4);">Cuti Karyawan</small>
         </div>
         

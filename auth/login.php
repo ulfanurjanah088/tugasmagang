@@ -129,12 +129,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
     <div class="login-hero">
         <nav class="login-nav">
             <span style="font-family:var(--font-display);font-weight:700;font-size:16px;color:#fff">
-                Magang<span style="color:var(--clr-primary)">.usg</span>
+                cuti<span style="color:var(--clr-primary)">modern</span>
             </span>
         </nav>
         <div class="login-hero-content">
-            <span class="login-eyebrow">Edisi 2025</span>
-            <h1>Manajemen Cuti<br><span class="brand">sistem.perizinan.cuti</span></h1>
+            <span class="login-eyebrow">Edisi 2026</span>
+            <h1>sistem-perizinan<br><span class="brand">sistem.perizinan.cuti</span></h1>
             <p>Sistem manajemen cuti karyawan yang modern, terintegrasi, dan sepenuhnya transparan untuk mendukung produktivitas tim Anda.</p>
             <div class="login-features">
                 <div class="login-feature">
@@ -275,8 +275,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
             <div class="mobile-login-wrap" style="display:flex;flex-direction:column;min-height:100vh;">
                 <div class="mobile-app-header">
                     <div class="mobile-app-icon"><i class="ri-building-2-line"></i></div>
-                    <div class="mobile-app-name">Magang<span style="color:var(--clr-primary)">.usg</span></div>
-                    <div class="mobile-app-sub">Manajemen Cuti Karyawan</div>
+                    <div class="mobile-app-name">cuti<span style="color:var(--clr-primary)">modern</span></div>
+                    <div class="mobile-app-sub">sistem-perizinan</div>
                 </div>
                 
                 <div class="mobile-login-card">

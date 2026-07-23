@@ -10,7 +10,7 @@
 
 <footer class="footer">
     <div class="footer-brand">
-        <strong style="font-size:16px;font-family:var(--font-display);">Magang<span style="color:var(--clr-primary);">.usg</span></strong>
+        <strong style="font-size:16px;font-family:var(--font-display);">sistem-perizinan<span style="color:var(--clr-primary);">.cuti</span></strong>
         <br>
         <small style="color:var(--clr-muted);font-size:12px;">© <?= date('Y') ?> sistem.perizinan.cuti - Manajemen Cuti Karyawan</small>
     </div>

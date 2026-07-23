@@ -370,7 +370,7 @@ if (isset($database) && isset($uid)) {
      TOPBAR
      ===================================================== -->
 <header class="topbar">
-    <div class="topbar-logo">Magang<span>.usg</span></div>
+    <div class="topbar-logo">sistem-perizinan<span>.cuti</span></div>
     
     <?php if ($isAdmin): ?>
     <nav class="topbar-nav">
